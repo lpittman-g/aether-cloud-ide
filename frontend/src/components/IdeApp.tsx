@@ -179,9 +179,12 @@ export function IdeApp({ slug }: { slug: string }) {
   }, [activePath, slug]);
 
   useEffect(() => {
+    // Prefer polling first — upgrades to websocket when available.
+    // Avoids flaky "websocket closed before established" in some hosts.
     const socket = io(getApiBase(), {
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: true,
+      timeout: 8000,
     });
     socketRef.current = socket;
 
@@ -321,8 +324,33 @@ export function IdeApp({ slug }: { slug: string }) {
     if (dirty) await handleSave();
     setPanelMode("console");
     appendLine("system", `—— ${new Date().toLocaleTimeString()} ——`);
-    // HTTP run is the reliable path; Socket.io is used for live status only.
-    await runViaHttp(runLang, content);
+
+    const language = runLang;
+    const codeSnapshot = content;
+
+    // Prefer Socket.io streaming (prompt layer 4); HTTP is the safety net.
+    if (socketRef.current?.connected) {
+      setRunning(true);
+      let settled = false;
+      const onEnd = () => {
+        settled = true;
+      };
+      socketRef.current.once("run:end", onEnd);
+      socketRef.current.once("run:error", onEnd);
+      socketRef.current.emit("run", { language, code: codeSnapshot });
+
+      window.setTimeout(() => {
+        if (!settled) {
+          socketRef.current?.off("run:end", onEnd);
+          socketRef.current?.off("run:error", onEnd);
+          appendLine("system", "Live stream timed out — using HTTP fallback…");
+          void runViaHttp(language, codeSnapshot);
+        }
+      }, 4000);
+      return;
+    }
+
+    await runViaHttp(language, codeSnapshot);
   };
 
   useEffect(() => {

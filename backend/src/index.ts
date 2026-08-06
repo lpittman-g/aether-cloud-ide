@@ -202,13 +202,13 @@ io.on("connection", (socket) => {
 
       socket.emit("run:start", { language });
       try {
-        const result = await runCode({
-          language,
-          code,
-          stdin: payload.stdin,
-        });
-        if (result.stdout) socket.emit("run:stdout", { data: result.stdout });
-        if (result.stderr) socket.emit("run:stderr", { data: result.stderr });
+        const result = await runCode(
+          { language, code, stdin: payload.stdin },
+          {
+            onStdout: (data) => socket.emit("run:stdout", { data }),
+            onStderr: (data) => socket.emit("run:stderr", { data }),
+          }
+        );
         socket.emit("run:end", {
           exitCode: result.exitCode,
           mode: result.mode,
