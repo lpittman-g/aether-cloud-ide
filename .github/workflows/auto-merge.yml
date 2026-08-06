@@ -1,0 +1,38 @@
+name: Auto-merge bot PRs
+
+# Automatically merge PRs from this repo's automation branches once CI passes.
+on:
+  check_suite:
+    types: [completed]
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  automerge:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PR" ]; then
+            echo "No PR in event — skip"
+            exit 0
+          fi
+          # Only auto-merge branches that look like agent/automation branches
+          HEAD=$(gh pr view "$PR" --json headRefName -q .headRefName)
+          case "$HEAD" in
+            cursor/*|dependabot/*|automation/*)
+              gh pr merge "$PR" --auto --squash || gh pr merge "$PR" --squash || true
+              ;;
+            *)
+              echo "Skipping auto-merge for branch $HEAD"
+              ;;
+          esac

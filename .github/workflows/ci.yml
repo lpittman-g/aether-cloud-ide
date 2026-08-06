@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Smoke API + sandbox
+        run: |
+          npm run start &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4000/api/health && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:4000/api/health | tee /tmp/health.json
+          curl -sf -X POST http://127.0.0.1:4000/api/run \
+            -H 'Content-Type: application/json' \
+            -d '{"language":"javascript","code":"console.log(40+2)"}' | tee /tmp/run.json
+          python3 - <<'PY'
+          import json
+          h=json.load(open("/tmp/health.json"))
+          assert h.get("ok") is True
+          r=json.load(open("/tmp/run.json"))
+          assert r.get("exitCode") == 0
+          assert "42" in (r.get("stdout") or "")
+          print("backend smoke ok")
+          PY
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
