@@ -51,8 +51,8 @@ jobs:
       contents: read
     env:
       # Target: Tru kids brand llc (328681352894). Override via repo var AWS_REGION.
-      AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
-      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
