@@ -1,0 +1,18 @@
+# Optional Docker sandbox stack for production-like local runs.
+# Frontend still runs via `npm run dev` in /frontend (or build + serve).
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      CLIENT_ORIGIN: "http://localhost:3000"
+      WORKSPACE_ROOT: /workspace
+    volumes:
+      - ./workspace:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /app
