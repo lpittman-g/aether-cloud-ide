@@ -8,7 +8,8 @@ A Replit-style browser IDE implementing the four-layer architecture from the
 3. **Sandbox** — Docker → optional Judge0 → local process fallback  
 4. **Realtime** — Socket.io streaming of stdout/stderr (+ HTTP fallback)
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) and [DEPLOY.md](./DEPLOY.md). AWS launch notes: [infra/aws/README.md](./infra/aws/README.md).
+See [ARCHITECTURE.md](./ARCHITECTURE.md), [DEPLOY.md](./DEPLOY.md), and the docs vault: **[docs/README.md](./docs/README.md)**.  
+AWS launch notes: [infra/aws/README.md](./infra/aws/README.md). Agents must follow [docs/AGENT_PROTOCOL.md](./docs/AGENT_PROTOCOL.md) (persist work to GitHub; never commit secrets).
 
 ## Quick start
 
