@@ -1,0 +1,91 @@
+name: Deploy AWS EC2
+
+# Hands-off deploy when AWS secrets are configured on the repo.
+# Required secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, EC2_SSH_KEY
+# Required vars:    AWS_REGION, EC2_KEY_NAME
+# Optional vars:    INSTANCE_TYPE (default t3.medium), STACK_NAME (default aether-ide)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "workspace/**"
+      - "infra/aws/**"
+      - ".github/workflows/deploy-aws.yml"
+      - "package.json"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aws-main
+  cancel-in-progress: false
+
+jobs:
+  check-secrets:
+    name: Check AWS secrets
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KEY_NAME: ${{ vars.EC2_KEY_NAME }}
+        run: |
+          if [ -n "$AWS_KEY" ] && [ -n "$SSH_KEY" ] && [ -n "$KEY_NAME" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "AWS deploy secrets present"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping AWS deploy — add secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, EC2_SSH_KEY and variable EC2_KEY_NAME"
+          fi
+
+  deploy:
+    name: Launch / update Aether on EC2
+    needs: check-secrets
+    if: needs.check-secrets.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      KEY_NAME: ${{ vars.EC2_KEY_NAME }}
+      INSTANCE_TYPE: ${{ vars.INSTANCE_TYPE || 't3.medium' }}
+      STACK_NAME: ${{ vars.STACK_NAME || 'aether-ide' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH key
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          KEY_PATH="$HOME/.ssh/${KEY_NAME}.pem"
+          printf '%s\n' "$EC2_SSH_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "KEY_FILE=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Install AWS CLI
+        run: |
+          if ! command -v aws >/dev/null; then
+            curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/aws.zip
+            unzip -q /tmp/aws.zip -d /tmp
+            sudo /tmp/aws/install
+          fi
+          aws --version
+          aws sts get-caller-identity
+
+      - name: Deploy stack + sync app
+        run: |
+          chmod +x infra/aws/launch.sh
+          ./infra/aws/launch.sh | tee /tmp/launch.out
+          {
+            echo "## Aether URLs"
+            grep -E 'Frontend:|Backend:' /tmp/launch.out || true
+          } >> "$GITHUB_STEP_SUMMARY"

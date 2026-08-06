@@ -3,33 +3,31 @@
 Uses a single **EC2** instance with Docker (needed for the code sandbox), plus
 systemd units for the Next.js frontend and Express backend.
 
-## Prerequisites
+## Hands-off (GitHub Actions)
 
-1. AWS CLI **v2.32+** (`aws --version`)
-2. Authenticated session — prefer `aws login` (short-lived credentials)
-3. An **EC2 key pair** in your target region
-4. The matching `.pem` file locally
+One-time setup on https://github.com/lpittman-g/aether-cloud-ide/settings/secrets/actions :
 
-## One-command launch
+| Type | Name | Value |
+| --- | --- | --- |
+| Secret | `AWS_ACCESS_KEY_ID` | IAM access key |
+| Secret | `AWS_SECRET_ACCESS_KEY` | IAM secret |
+| Secret | `AWS_SESSION_TOKEN` | (optional) |
+| Secret | `EC2_SSH_KEY` | Full `.pem` private key contents |
+| Variable | `EC2_KEY_NAME` | EC2 key pair name in the region |
+| Variable | `AWS_REGION` | e.g. `us-east-1` (optional) |
+
+After that, every push to `main` that touches the app/infra runs **Deploy AWS EC2** automatically. No local `aws login` needed.
+
+## Manual one-command launch
 
 ```bash
-# After aws login succeeds:
 export AWS_REGION=us-east-1
 export KEY_NAME=your-keypair-name
-export KEY_FILE=~/.ssh/your-keypair-name.pem   # if not at default path
+export KEY_FILE=~/.ssh/your-keypair-name.pem
 
 chmod +x infra/aws/launch.sh
 ./infra/aws/launch.sh
 ```
-
-The script will:
-
-1. Deploy `infra/aws/cloudformation.yaml` (Ubuntu 24.04, t3.medium, EIP, SG)
-2. Wait for Docker + Node bootstrap
-3. `rsync` the app to the instance
-4. Build the frontend and start systemd services
-
-Open the printed `http://<eip>:3000` URL.
 
 ## Tear down
 
