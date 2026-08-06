@@ -74,16 +74,8 @@ export function IdeApp({ slug }: { slug: string }) {
   const [panelMode, setPanelMode] = useState<"console" | "preview">("console");
   const [previewDoc, setPreviewDoc] = useState("");
   const fileCacheRef = useRef<Record<string, string>>({});
-  const runWaitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
-
-  const clearRunWait = () => {
-    if (runWaitRef.current) {
-      clearTimeout(runWaitRef.current);
-      runWaitRef.current = null;
-    }
-  };
 
   const appendLine = useCallback((kind: TerminalLine["kind"], text: string) => {
     setLines((prev) => [...prev, { id: nextId(), kind, text }]);
@@ -118,7 +110,6 @@ export function IdeApp({ slug }: { slug: string }) {
         appendLine("stderr", (err as Error).message);
       } finally {
         setRunning(false);
-        clearRunWait();
       }
     },
     [appendLine]
@@ -200,7 +191,6 @@ export function IdeApp({ slug }: { slug: string }) {
       if (payload?.message) appendLine("meta", payload.message);
     });
     socket.on("run:start", (payload: { language: string }) => {
-      clearRunWait();
       setRunning(true);
       appendLine("system", `› Running ${payload.language}…`);
     });
@@ -213,7 +203,6 @@ export function IdeApp({ slug }: { slug: string }) {
     socket.on(
       "run:end",
       (payload: { exitCode: number; mode: string; timedOut: boolean }) => {
-        clearRunWait();
         setRunning(false);
         setSandboxMode(payload.mode);
         appendLine(
@@ -225,13 +214,11 @@ export function IdeApp({ slug }: { slug: string }) {
       }
     );
     socket.on("run:error", (payload: { error: string }) => {
-      clearRunWait();
       setRunning(false);
       appendLine("stderr", payload.error);
     });
 
     return () => {
-      clearRunWait();
       socket.disconnect();
       socketRef.current = null;
     };
