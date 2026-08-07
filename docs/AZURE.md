@@ -29,6 +29,20 @@ Agents need **one** of:
 
 Without that, only the public IP inventory can be recorded.
 
+### Auth attempt (2026-08-07)
+
+Device-code login as `lpittman@cutline-industries.studio` reached Entra tenant
+`beb7ae52-e195-407d-bc91-03dd2141229d` but failed:
+
+- `AADSTS530035` — access blocked by **security defaults**
+- `No subscriptions found` for that identity (Subscription 1 starting `09ab433b-d579-4c…` not attached)
+
+Unblock options:
+
+1. In Entra admin: disable or adjust Security defaults / allow the CLI auth method, then re-run `az login`
+2. Grant this user (or a service principal) **Reader+** on `VMAzule_group` / Subscription 1
+3. Share SSH credentials for the VM at `20.121.66.136` so deploy can skip Azure API auth
+
 ## Probe notes (2026-08-07)
 
 - TCP connect to common ports from the agent VM was inconclusive/unreliable; HTTP to `:80` connected then timed out with no response.

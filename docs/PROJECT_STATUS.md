@@ -25,6 +25,8 @@ See `docs/AZURE.md`.
 
 ## Done
 
+- [x] In-app Replit stack map at `/stack` + `GET /api/stack` (engine vs sandbox languages)
+
 - [x] App + CI + docs vault on GitHub
 - [x] IAM user `Cursor` with AdministratorAccess and active access keys
 - [x] GitHub Actions secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `EC2_SSH_KEY`

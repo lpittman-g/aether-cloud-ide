@@ -1,6 +1,15 @@
 "use client";
 
-import { Circle, Code2, FileCode2, Globe, Loader2, Plus, Sparkles } from "lucide-react";
+import {
+  Circle,
+  Code2,
+  FileCode2,
+  Globe,
+  Layers,
+  Loader2,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,6 +21,7 @@ import {
   type Template,
   type TemplateId,
 } from "@/lib/api";
+import { ENGINE_STACK, SANDBOX_LANGUAGES, STACK_CLARIFICATION } from "@/lib/stack";
 
 const ICONS: Record<TemplateId, typeof Code2> = {
   python: FileCode2,
@@ -105,14 +115,23 @@ export function Dashboard() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-semibold text-[var(--bg-deep)] transition hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" />
-          Create Repl
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/stack"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <Layers className="h-4 w-4" />
+            Stack
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-semibold text-[var(--bg-deep)] transition hover:brightness-110"
+          >
+            <Plus className="h-4 w-4" />
+            Create Repl
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl px-6 pb-16 pt-10">
@@ -136,6 +155,31 @@ export function Dashboard() {
             {error}
           </div>
         )}
+
+        <section className="mt-14 max-w-3xl">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            Engine vs sandbox
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">
+            {STACK_CLARIFICATION.body}
+          </p>
+          <p className="mt-4 mono text-xs leading-relaxed text-[var(--accent)]">
+            Engine: {ENGINE_STACK.slice(0, 4).map((e) => e.name.split("·")[0].trim()).join(" · ")}
+            {" · "}…
+          </p>
+          <p className="mt-2 mono text-xs leading-relaxed text-[var(--text-muted)]">
+            Runnable now:{" "}
+            {SANDBOX_LANGUAGES.filter((l) => l.category !== "planned")
+              .map((l) => l.label)
+              .join(" · ")}
+          </p>
+          <Link
+            href="/stack"
+            className="mt-4 inline-flex text-sm font-medium text-[var(--accent)] transition hover:underline"
+          >
+            Full stack map →
+          </Link>
+        </section>
 
         <section className="mt-12">
           <div className="mb-4 flex items-end justify-between gap-4">

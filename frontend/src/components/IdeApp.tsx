@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Circle,
   Eye,
+  Layers,
   Loader2,
   Play,
   Save,
@@ -409,6 +410,14 @@ export function IdeApp({ slug }: { slug: string }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/stack"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--accent)]"
+            title="Engine vs sandbox stack"
+          >
+            <Layers className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Stack</span>
+          </Link>
           <span className="hidden items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--text-muted)] lg:inline-flex">
             {connected ? (
               <Wifi className="h-3 w-3 text-[var(--accent)]" />

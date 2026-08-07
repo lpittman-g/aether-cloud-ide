@@ -21,6 +21,7 @@ import {
   type TemplateId,
 } from "./projects.js";
 import { getSandboxMode, runCode, type SupportedLanguage } from "./sandbox.js";
+import { stackPayload } from "./stack.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WORKSPACE =
@@ -41,6 +42,10 @@ function projectPath(req: express.Request): string {
 app.get("/api/health", async (_req, res) => {
   const mode = await getSandboxMode();
   res.json({ ok: true, sandbox: mode, workspace: WORKSPACE });
+});
+
+app.get("/api/stack", (_req, res) => {
+  res.json(stackPayload);
 });
 
 app.get("/api/templates", (_req, res) => {
