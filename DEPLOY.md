@@ -1,52 +1,49 @@
 # Deploying Aether
 
-Cursor does not host apps. Split hosting like the Replit-clone guide:
+## Primary: AWS EC2 (live)
 
-## Frontend (Next.js)
+Aether runs as a public app on AWS account `583968735276` (`us-east-2`):
 
-Suitable hosts: **Vercel**, **Railway**, **Render**.
-
-```bash
-cd frontend
-# set NEXT_PUBLIC_API_URL to your backend public URL
-npm run build && npm start
-```
-
-Env:
-- `NEXT_PUBLIC_API_URL` — e.g. `https://aether-api.example.com`
-
-## Backend + sandbox
-
-Because the API runs untrusted code, prefer a **VM** (DigitalOcean, AWS EC2, GCP) with Docker.
-
-```bash
-cd backend
-export CLIENT_ORIGIN=https://your-frontend.example.com
-export WORKSPACE_ROOT=/var/aether/workspace
-# optional remote sandbox instead of Docker:
-# export JUDGE0_URL=https://judge0-ce.p.rapidapi.com
-# export JUDGE0_API_KEY=...
-# export JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
-npm start
-```
-
-Docker Compose (API + docker.sock for sibling containers):
-
-```bash
-docker compose up --build
-```
-
-### Railway notes
-
-Railway can host the **frontend** and a **process-mode** or **Judge0-backed** API. Native Docker-in-Docker sandboxes usually need a dedicated VM. Example service env for the API:
-
-| Key | Value |
+| Surface | URL |
 | --- | --- |
-| `PORT` | provided by Railway |
-| `CLIENT_ORIGIN` | your frontend URL |
-| `JUDGE0_URL` | optional |
+| IDE app | http://18.225.160.49:3000 |
+| API | http://18.225.160.49:4000 |
+| Health | http://18.225.160.49:4000/api/health |
 
-`railway.toml` / `backend/railway.toml` are included as starting points.
+Stack: CloudFormation `aether-ide` → EC2 `i-0035b7f203de1905e`, systemd units `aether-frontend` / `aether-backend`, Docker sandboxes.
+
+```bash
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-2
+export KEY_NAME=aether-cursor
+./infra/aws/bootstrap-from-keys.sh
+# or: KEY_NAME=aether-cursor KEY_FILE=~/.ssh/aether-cursor.pem ./infra/aws/launch.sh
+```
+
+Push to `main` (backend/frontend/infra paths) also triggers **Deploy AWS EC2** via GitHub Actions when secrets are set. Details: `docs/AWS.md`, `docs/RUNBOOK.md`.
+
+## Alternate: Azure VMAzule (pending)
+
+Public IP `20.121.66.136` (`VMAzule-ip`, `VMAzule_group`, East US). See `docs/AZURE.md`. Needs Azure auth or SSH before install.
+
+## Local development
+
+```bash
+# Terminal 1
+cd backend && npm install && npm run start   # :4000
+
+# Terminal 2
+cd frontend && npm install && npm run dev    # :3000
+```
+
+Open http://localhost:3000
+
+## Other hosts (optional)
+
+Frontend-only: Vercel / Railway / Render with `NEXT_PUBLIC_API_URL` pointing at the AWS API.
+
+Backend sandbox prefers a **VM with Docker** (as on AWS EC2). Process-mode or Judge0 can run on PaaS without Docker-in-Docker.
 
 ## Security
 
