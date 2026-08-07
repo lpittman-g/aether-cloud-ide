@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS projects (
+  slug TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  language TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS presence (
+  room TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room, client_id)
+);
