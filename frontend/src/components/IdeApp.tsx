@@ -29,6 +29,7 @@ import {
   type FileNode,
   type Project,
 } from "@/lib/api";
+import { runJavascriptInBrowser } from "@/lib/wasmRunner";
 
 let lineCounter = 0;
 function nextId() {
@@ -76,6 +77,8 @@ export function IdeApp({ slug }: { slug: string }) {
   const [previewDoc, setPreviewDoc] = useState("");
   const fileCacheRef = useRef<Record<string, string>>({});
   const socketRef = useRef<Socket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const engineRef = useRef<"go" | "node">("node");
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
 
   const appendLine = useCallback((kind: TerminalLine["kind"], text: string) => {
@@ -180,53 +183,124 @@ export function IdeApp({ slug }: { slug: string }) {
   }, [activePath, slug]);
 
   useEffect(() => {
-    // Prefer polling first — upgrades to websocket when available.
-    // Avoids flaky "websocket closed before established" in some hosts.
-    const socket = io(getApiBase(), {
-      transports: ["polling", "websocket"],
-      reconnection: true,
-      timeout: 8000,
-    });
-    socketRef.current = socket;
+    let cancelled = false;
+    let socket: Socket | null = null;
+    let ws: WebSocket | null = null;
 
-    socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
-    socket.on("ready", (payload: { message?: string }) => {
-      if (payload?.message) appendLine("meta", payload.message);
-    });
-    socket.on("run:start", (payload: { language: string }) => {
-      setRunning(true);
-      appendLine("system", `› Running ${payload.language}…`);
-    });
-    socket.on("run:stdout", (payload: { data: string }) => {
-      appendLine("stdout", payload.data.replace(/\n$/, ""));
-    });
-    socket.on("run:stderr", (payload: { data: string }) => {
-      appendLine("stderr", payload.data.replace(/\n$/, ""));
-    });
-    socket.on(
-      "run:end",
-      (payload: { exitCode: number; mode: string; timedOut: boolean }) => {
-        setRunning(false);
-        setSandboxMode(payload.mode);
-        appendLine(
-          "meta",
-          `Process exited with code ${payload.exitCode} (${payload.mode}${
-            payload.timedOut ? ", timed out" : ""
-          })`
+    (async () => {
+      try {
+        const health = await fetch(`${getApiBase()}/api/health`).then((r) =>
+          r.json()
         );
+        if (cancelled) return;
+        if (health.engine === "go") {
+          engineRef.current = "go";
+          const base = getApiBase().replace(/^http/, "ws");
+          ws = new WebSocket(`${base}/ws`);
+          wsRef.current = ws;
+          ws.onopen = () => {
+            setConnected(true);
+            ws?.send(JSON.stringify({ type: "join", room: slug }));
+          };
+          ws.onclose = () => setConnected(false);
+          ws.onmessage = (ev) => {
+            try {
+              const msg = JSON.parse(String(ev.data));
+              const typ = msg.type as string;
+              if (typ === "ready" && msg.message) {
+                appendLine("meta", String(msg.message));
+              } else if (typ === "run:start") {
+                setRunning(true);
+                appendLine("system", `› Running ${msg.language}…`);
+              } else if (typ === "run:stdout") {
+                appendLine(
+                  "stdout",
+                  String(msg.chunk ?? "").replace(/\n$/, "")
+                );
+              } else if (typ === "run:stderr") {
+                appendLine(
+                  "stderr",
+                  String(msg.chunk ?? "").replace(/\n$/, "")
+                );
+              } else if (typ === "run:end") {
+                setSandboxMode(msg.mode ?? "rust");
+                appendLine(
+                  "meta",
+                  `Process exited with code ${msg.exitCode} (${msg.mode}${
+                    msg.timedOut ? ", timed out" : ""
+                  })`
+                );
+                setRunning(false);
+              } else if (typ === "run:error") {
+                appendLine("stderr", String(msg.error ?? "Run failed"));
+                setRunning(false);
+              }
+            } catch {
+              /* ignore */
+            }
+          };
+          return;
+        }
+      } catch {
+        /* fall through */
       }
-    );
-    socket.on("run:error", (payload: { error: string }) => {
-      setRunning(false);
-      appendLine("stderr", payload.error);
-    });
+
+      if (cancelled) return;
+      engineRef.current = "node";
+      socket = io(getApiBase(), {
+        transports: ["polling", "websocket"],
+        reconnection: true,
+        timeout: 8000,
+      });
+      socketRef.current = socket;
+      socket.on("connect", () => setConnected(true));
+      socket.on("disconnect", () => setConnected(false));
+      socket.on("ready", (payload: { message?: string }) => {
+        if (payload?.message) appendLine("meta", payload.message);
+      });
+      socket.on("run:start", (payload: { language: string }) => {
+        setRunning(true);
+        appendLine("system", `› Running ${payload.language}…`);
+      });
+      socket.on("run:stdout", (payload: { data?: string; chunk?: string }) => {
+        appendLine(
+          "stdout",
+          String(payload.data ?? payload.chunk ?? "").replace(/\n$/, "")
+        );
+      });
+      socket.on("run:stderr", (payload: { data?: string; chunk?: string }) => {
+        appendLine(
+          "stderr",
+          String(payload.data ?? payload.chunk ?? "").replace(/\n$/, "")
+        );
+      });
+      socket.on(
+        "run:end",
+        (payload: { exitCode: number; mode: string; timedOut: boolean }) => {
+          setRunning(false);
+          setSandboxMode(payload.mode);
+          appendLine(
+            "meta",
+            `Process exited with code ${payload.exitCode} (${payload.mode}${
+              payload.timedOut ? ", timed out" : ""
+            })`
+          );
+        }
+      );
+      socket.on("run:error", (payload: { error: string }) => {
+        setRunning(false);
+        appendLine("stderr", payload.error);
+      });
+    })();
 
     return () => {
-      socket.disconnect();
+      cancelled = true;
+      socket?.disconnect();
+      ws?.close();
       socketRef.current = null;
+      wsRef.current = null;
     };
-  }, [appendLine]);
+  }, [appendLine, slug]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -329,7 +403,46 @@ export function IdeApp({ slug }: { slug: string }) {
     const language = runLang;
     const codeSnapshot = content;
 
-    // Prefer Socket.io streaming (prompt layer 4); HTTP is the safety net.
+    // Browser Wasm/worker path for JavaScript (Replit-style in-browser runtime).
+    if (language === "javascript" && engineRef.current === "go") {
+      // Prefer server Rust sandbox via WS when connected; else Wasm worker.
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        setRunning(true);
+        wsRef.current.send(
+          JSON.stringify({ type: "run", language, code: codeSnapshot })
+        );
+        window.setTimeout(() => {
+          if (running) {
+            appendLine("system", "Live stream slow — HTTP fallback…");
+            void runViaHttp(language, codeSnapshot);
+          }
+        }, 8000);
+        return;
+      }
+      setRunning(true);
+      appendLine("system", "› Running javascript (browser worker)…");
+      const result = await runJavascriptInBrowser(codeSnapshot);
+      if (result.stdout) appendLine("stdout", result.stdout.replace(/\n$/, ""));
+      if (result.stderr) appendLine("stderr", result.stderr.replace(/\n$/, ""));
+      setSandboxMode(result.mode);
+      appendLine(
+        "meta",
+        `Process exited with code ${result.exitCode} (${result.mode}${
+          result.timedOut ? ", timed out" : ""
+        })`
+      );
+      setRunning(false);
+      return;
+    }
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      setRunning(true);
+      wsRef.current.send(
+        JSON.stringify({ type: "run", language, code: codeSnapshot })
+      );
+      return;
+    }
+
     if (socketRef.current?.connected) {
       setRunning(true);
       let settled = false;
@@ -348,6 +461,21 @@ export function IdeApp({ slug }: { slug: string }) {
           void runViaHttp(language, codeSnapshot);
         }
       }, 4000);
+      return;
+    }
+
+    if (language === "javascript") {
+      setRunning(true);
+      appendLine("system", "› Running javascript (browser worker)…");
+      const result = await runJavascriptInBrowser(codeSnapshot);
+      if (result.stdout) appendLine("stdout", result.stdout.replace(/\n$/, ""));
+      if (result.stderr) appendLine("stderr", result.stderr.replace(/\n$/, ""));
+      setSandboxMode(result.mode);
+      appendLine(
+        "meta",
+        `Process exited with code ${result.exitCode} (${result.mode})`
+      );
+      setRunning(false);
       return;
     }
 

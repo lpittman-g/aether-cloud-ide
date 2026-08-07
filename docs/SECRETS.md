@@ -38,5 +38,16 @@ Prefer device-code `az login` when interactive; use SP secrets for headless agen
 - SSH private keys / PEM files  
 - OAuth device codes / authorization blobs  
 - `~/.aws/credentials` contents  
+- GCP service account JSON keys  
 
 If a secret was pasted into chat, **rotate it** and update the secret store — do not copy it into git.
+
+## Google Cloud
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `GCP_PROJECT_ID` | secret / env | Target GCP project |
+| `GCP_REGION` | env | e.g. `us-central1` |
+| `GCP_ZONE` | env | e.g. `us-central1-a` |
+| `GCP_SERVICE_ACCOUNT_KEY` | secret | Service account JSON |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | secret | Alternate SA JSON blob |

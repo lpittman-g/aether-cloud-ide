@@ -1,50 +1,64 @@
 # Deploying Aether
 
-## Primary: AWS EC2 (live)
+## Primary cloud: Google Cloud (Replit-style)
 
-Aether runs as a public app on AWS account `583968735276` (`us-east-2`):
+Aether’s engine matches Replit’s model: **TypeScript IDE + Go orchestration + Python AI + Rust sandbox on GCP**.
+
+```bash
+# Auth
+gcloud auth login
+export GCP_PROJECT_ID=your-project
+
+# Full stack on Compute Engine (Docker Compose: web, Go API, Python AI, Postgres, Redis)
+./infra/gcp/deploy-gce.sh
+
+# Or Cloud Run (API + web; process/Rust sandbox)
+./infra/gcp/deploy-cloud-run.sh
+```
+
+See `docs/GCP.md`.
+
+### Engine layout
+
+| Path | Language | Role |
+| --- | --- | --- |
+| `frontend/` | TypeScript · Next.js | Browser IDE + Wasm worker runner |
+| `engine/go-api/` | Go | REST, WebSocket, orchestration |
+| `engine/ai-python/` | Python | Agent / LLM orchestration |
+| `engine/sandbox-rust/` | Rust | Sandbox executor |
+| `docker-compose.yml` | — | Local/GCP Compose stack |
+
+## Also live: AWS EC2 (legacy host)
 
 | Surface | URL |
 | --- | --- |
-| IDE app | http://18.225.160.49:3000 |
-| API | http://18.225.160.49:4000 |
-| Health | http://18.225.160.49:4000/api/health |
-
-Stack: CloudFormation `aether-ide` → EC2 `i-0035b7f203de1905e`, systemd units `aether-frontend` / `aether-backend`, Docker sandboxes.
+| IDE | http://18.225.160.49:3000 |
+| API | http://18.225.160.49:4000/api/health |
 
 ```bash
-export AWS_ACCESS_KEY_ID=...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_REGION=us-east-2
-export KEY_NAME=aether-cursor
-./infra/aws/bootstrap-from-keys.sh
-# or: KEY_NAME=aether-cursor KEY_FILE=~/.ssh/aether-cursor.pem ./infra/aws/launch.sh
+export AWS_REGION=us-east-2 KEY_NAME=aether-cursor
+./infra/aws/launch.sh
 ```
-
-Push to `main` (backend/frontend/infra paths) also triggers **Deploy AWS EC2** via GitHub Actions when secrets are set. Details: `docs/AWS.md`, `docs/RUNBOOK.md`.
-
-## Alternate: Azure VMAzule (pending)
-
-Public IP `20.121.66.136` (`VMAzule-ip`, `VMAzule_group`, East US). See `docs/AZURE.md`. Needs Azure auth or SSH before install.
 
 ## Local development
 
 ```bash
-# Terminal 1
-cd backend && npm install && npm run start   # :4000
+# Terminal A — Rust sandbox
+cd engine/sandbox-rust && cargo build --release
 
-# Terminal 2
-cd frontend && npm install && npm run dev    # :3000
+# Terminal B — Python AI
+cd engine/ai-python && pip install -r requirements.txt && python main.py
+
+# Terminal C — Go API
+cd engine/go-api && go run .
+# WORKSPACE_ROOT=../../workspace AETHER_SANDBOX=../sandbox-rust/target/release/aether-sandbox
+
+# Terminal D — Frontend
+cd frontend && npm run dev
 ```
 
-Open http://localhost:3000
-
-## Other hosts (optional)
-
-Frontend-only: Vercel / Railway / Render with `NEXT_PUBLIC_API_URL` pointing at the AWS API.
-
-Backend sandbox prefers a **VM with Docker** (as on AWS EC2). Process-mode or Judge0 can run on PaaS without Docker-in-Docker.
+Or: `docker compose up --build`
 
 ## Security
 
-Never expose process-mode sandboxes on the public internet without extra isolation. Prefer Docker (no network, resource limits) or a hosted execution API (Judge0).
+Prefer isolated sandboxes (Rust runner / Docker on GCE). Never expose unconstrained process runners on the public internet without limits.

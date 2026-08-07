@@ -7,6 +7,7 @@ Everything durable about this project should live in git. Start here:
 | [AGENT_PROTOCOL.md](./AGENT_PROTOCOL.md) | Rules for agents: always commit code + docs to GitHub |
 | [PROJECT_STATUS.md](./PROJECT_STATUS.md) | What’s done / blocked / next |
 | [AWS.md](./AWS.md) | Accounts, regions, IAM, bootstrap |
+| [GCP.md](./GCP.md) | Google Cloud deploy (GCE / Cloud Run) |
 | [AZURE.md](./AZURE.md) | VMAzule public IP / resource group target |
 | [REPLIT_STACK.md](./REPLIT_STACK.md) | Engine vs sandbox languages (in-app `/stack`) |
 | [SECRETS.md](./SECRETS.md) | Secret **names** (never values) |

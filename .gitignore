@@ -6,3 +6,9 @@ dist/
 .env
 .env.local
 .turbo
+
+# Engine build artifacts
+engine/sandbox-rust/target/
+engine/ai-python/__pycache__/
+*.pyc
+/tmp/

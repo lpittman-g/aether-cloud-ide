@@ -1,18 +1,65 @@
-# Optional Docker sandbox stack for production-like local runs.
-# Frontend still runs via `npm run dev` in /frontend (or build + serve).
+# Aether on Google Cloud (Replit-style: GCP + Docker)
 
 services:
-  backend:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aether
+      POSTGRES_PASSWORD: aether
+      POSTGRES_DB: aether
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./engine/migrations:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  ai:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: ./engine/ai-python
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: "5001"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+  api:
+    build:
+      context: .
+      dockerfile: engine/go-api/Dockerfile
     ports:
       - "4000:4000"
     environment:
       PORT: "4000"
-      CLIENT_ORIGIN: "http://localhost:3000"
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
       WORKSPACE_ROOT: /workspace
+      AETHER_AI_URL: http://ai:5001
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://aether:aether@postgres:5432/aether?sslmode=disable
+      AETHER_SANDBOX: /usr/local/bin/aether-sandbox
     volumes:
       - ./workspace:/workspace
-      - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /app
+    depends_on:
+      - redis
+      - ai
+      - postgres
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
