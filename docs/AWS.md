@@ -23,11 +23,20 @@ Deploy automation defaults to **`583968735276` + `us-east-2`**.
 ## IAM setup
 
 1. User `Cursor` with **AdministratorAccess** (or tighter later).  
-2. Create **access key** (CLI):  
-   https://console.aws.amazon.com/iam/home#/users/details/Cursor?section=security_credentials  
-3. Put values in GitHub / Cursor secrets (see `SECRETS.md`).
+2. Access keys exist for CLI (prefix `AKIAYP5Z…` on this account). Store only in GitHub / Cursor secrets — never in git.  
+3. Console: https://console.aws.amazon.com/iam/home#/users/details/Cursor?section=security_credentials  
 
 Console password login alone is **not** enough for the agent CLI — API access keys are required.
+
+### Current deploy footprint (`us-east-2`)
+
+| Resource | Value |
+| --- | --- |
+| CloudFormation stack | `aether-ide` |
+| Instance | `i-0035b7f203de1905e` |
+| Public IP (as of 2026-08-07) | `18.225.160.49` |
+| Key pair | `aether-cursor` |
+| App path on host | `/opt/aether/app` |
 
 ## Autonomous bootstrap
 
