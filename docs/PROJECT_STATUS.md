@@ -21,6 +21,7 @@
 - [x] EC2 key pair `aether-cursor`; app under `/opt/aether/app`
 - [x] Frontend HTTP 200; health `{"ok":true,"sandbox":"docker",...}`
 - [x] `/api/run` JS → `42`, Python → `4` (Docker)
+- [x] Auto-merge workflow updated to pass repository explicitly to `gh pr` commands (fixes non-checkout runner failure)
 
 ## Open follow-ups
 
