@@ -3,7 +3,7 @@
 **Repo:** https://github.com/lpittman-g/aether-cloud-ide  
 **Updated:** 2026-08-07
 
-## Live (AWS)
+## Primary live app (AWS)
 
 | Surface | URL / value |
 | --- | --- |
