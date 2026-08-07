@@ -27,10 +27,10 @@ jobs:
             exit 0
           fi
           # Only auto-merge branches that look like agent/automation branches
-          HEAD=$(gh pr view "$PR" --json headRefName -q .headRefName)
+          HEAD=$(gh pr view "$PR" -R "$GITHUB_REPOSITORY" --json headRefName -q .headRefName)
           case "$HEAD" in
             cursor/*|dependabot/*|automation/*)
-              gh pr merge "$PR" --auto --squash || gh pr merge "$PR" --squash || true
+              gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --auto --squash || gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --squash || true
               ;;
             *)
               echo "Skipping auto-merge for branch $HEAD"

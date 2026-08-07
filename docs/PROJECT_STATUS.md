@@ -21,6 +21,7 @@
 - [x] EC2 key pair `aether-cursor`; app under `/opt/aether/app`
 - [x] Frontend HTTP 200; health `{"ok":true,"sandbox":"docker",...}`
 - [x] `/api/run` JS → `42`, Python → `4` (Docker)
+- [x] Auto-merge workflow now passes `-R "$GITHUB_REPOSITORY"` to `gh pr` commands so runs do not require a checked-out `.git` directory
 
 ## Open follow-ups
 
