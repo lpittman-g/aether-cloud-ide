@@ -8,6 +8,7 @@ Everything durable about this project should live in git. Start here:
 | [PROJECT_STATUS.md](./PROJECT_STATUS.md) | What’s done / blocked / next |
 | [AWS.md](./AWS.md) | Accounts, regions, IAM, bootstrap |
 | [AZURE.md](./AZURE.md) | VMAzule public IP / resource group target |
+| [REPLIT_STACK.md](./REPLIT_STACK.md) | Engine vs sandbox languages (in-app `/stack`) |
 | [SECRETS.md](./SECRETS.md) | Secret **names** (never values) |
 | [RUNBOOK.md](./RUNBOOK.md) | Local + AWS how-to |
 | [sessions/](./sessions/) | Dated session notes |
