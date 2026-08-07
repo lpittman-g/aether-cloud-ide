@@ -15,6 +15,7 @@ When working on this repository (Aether / Replit 2 IDE), **every meaningful acti
 | --- | --- |
 | Current status & next actions | `docs/PROJECT_STATUS.md` |
 | AWS accounts, regions, deploy path | `docs/AWS.md` |
+| Azure VMAzule target | `docs/AZURE.md` |
 | How to run / deploy | `docs/RUNBOOK.md` |
 | Architecture | `ARCHITECTURE.md`, `DEPLOY.md` |
 | Session notes (sanitized) | `docs/sessions/YYYY-MM-DD.md` |

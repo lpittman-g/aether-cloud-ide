@@ -31,6 +31,16 @@ Or, after secrets are in GitHub Actions: push to `main` or run workflow **Deploy
 aws cloudformation delete-stack --stack-name aether-ide --region us-east-2
 ```
 
+## Azure (VMAzule)
+
+See `docs/AZURE.md`. Public IP `20.121.66.136` in `VMAzule_group` (East US).
+
+```bash
+az login   # or device code / service principal
+az account set --subscription <Subscription-1-GUID>
+# then resolve VM + NSG for VMAzule-ip and install Aether like the AWS host
+```
+
 ## Useful links
 
 - Repo: https://github.com/lpittman-g/aether-cloud-ide  
