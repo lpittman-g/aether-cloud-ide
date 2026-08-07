@@ -7,6 +7,7 @@ Everything durable about this project should live in git. Start here:
 | [AGENT_PROTOCOL.md](./AGENT_PROTOCOL.md) | Rules for agents: always commit code + docs to GitHub |
 | [PROJECT_STATUS.md](./PROJECT_STATUS.md) | What’s done / blocked / next |
 | [AWS.md](./AWS.md) | Accounts, regions, IAM, bootstrap |
+| [AZURE.md](./AZURE.md) | VMAzule public IP / resource group target |
 | [SECRETS.md](./SECRETS.md) | Secret **names** (never values) |
 | [RUNBOOK.md](./RUNBOOK.md) | Local + AWS how-to |
 | [sessions/](./sessions/) | Dated session notes |
