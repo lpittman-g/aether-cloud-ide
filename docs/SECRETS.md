@@ -19,6 +19,18 @@ Store **names and purpose** here so future agents know what to expect.
 
 Same names preferred so Cloud Agents can deploy without interactive `aws login`.
 
+## Azure (optional — VMAzule)
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `AZURE_SUBSCRIPTION_ID` | secret / env | Subscription 1 GUID (starts `09ab433b-d579-4c…`) |
+| `AZURE_TENANT_ID` | secret (optional) | Entra tenant for SP login |
+| `AZURE_CLIENT_ID` | secret (optional) | App registration / SP client id |
+| `AZURE_CLIENT_SECRET` | secret (optional) | SP client secret |
+| `AZURE_VM_SSH_KEY` | secret (optional) | Private key for SSH to VM behind `VMAzule-ip` |
+
+Prefer device-code `az login` when interactive; use SP secrets for headless agents.
+
 ## Never commit
 
 - IAM secret access keys  
