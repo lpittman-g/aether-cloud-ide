@@ -57,41 +57,67 @@ for i in $(seq 1 60); do
   sleep 10
 done
 
-echo "==> Syncing app to /opt/aether/app"
+echo "==> Syncing app + engine to host"
 RSYNC_SSH="ssh -i $KEY_FILE -o StrictHostKeyChecking=accept-new"
 rsync -az --delete \
   --exclude node_modules \
   --exclude .next \
   --exclude .git \
+  --exclude target \
   -e "$RSYNC_SSH" \
-  "$ROOT/backend" "$ROOT/frontend" "$ROOT/workspace" "$ROOT/package.json" \
+  "$ROOT/frontend" "$ROOT/workspace" "$ROOT/engine" \
   ubuntu@"$PUBLIC_IP":/opt/aether/app/
 
-echo "==> Installing deps, building frontend, starting services"
+echo "==> Building Go/Rust/Python engine + frontend"
 "${SSH[@]}" bash -s <<REMOTE
 set -euo pipefail
-cd /opt/aether/app/backend && npm install --omit=dev
+sudo apt-get update -qq
+sudo apt-get install -y -qq golang-go rustc cargo python3-pip python3-venv >/dev/null || true
+
+sudo mkdir -p /opt/aether/bin /opt/aether/ai
+cd /opt/aether/app/engine/sandbox-rust && cargo build --release
+sudo cp -f target/release/aether-sandbox /opt/aether/bin/aether-sandbox
+cd /opt/aether/app/engine/go-api && go build -o /opt/aether/bin/aether-api .
+sudo chmod +x /opt/aether/bin/aether-api /opt/aether/bin/aether-sandbox
+
+rsync -a /opt/aether/app/engine/ai-python/ /opt/aether/ai/
+python3 -m venv /opt/aether/ai/.venv
+/opt/aether/ai/.venv/bin/pip install -q -r /opt/aether/ai/requirements.txt
+
 cd /opt/aether/app/frontend && npm install && NEXT_PUBLIC_API_URL=http://${PUBLIC_IP}:4000 npm run build
 
-sudo tee /etc/systemd/system/aether-backend.service >/dev/null <<UNIT
+sudo tee /etc/systemd/system/aether-ai.service >/dev/null <<'UNIT'
 [Unit]
-Description=Aether backend
-After=network.target docker.service
-Wants=docker.service
-
+Description=Aether Python AI
+After=network.target
 [Service]
 Type=simple
-WorkingDirectory=/opt/aether/app/backend
-Environment=PORT=4000
-Environment=CLIENT_ORIGIN=http://${PUBLIC_IP}:3000
-Environment=WORKSPACE_ROOT=/opt/aether/app/workspace
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
+WorkingDirectory=/opt/aether/ai
+Environment=PORT=5001
+ExecStart=/opt/aether/ai/.venv/bin/python /opt/aether/ai/main.py
 Restart=always
 RestartSec=3
 User=ubuntu
-Group=docker
+[Install]
+WantedBy=multi-user.target
+UNIT
 
+sudo tee /etc/systemd/system/aether-backend.service >/dev/null <<UNIT
+[Unit]
+Description=Aether Go engine
+After=network.target aether-ai.service
+Wants=aether-ai.service
+[Service]
+Type=simple
+Environment=PORT=4000
+Environment=CLIENT_ORIGIN=http://${PUBLIC_IP}:3000
+Environment=WORKSPACE_ROOT=/opt/aether/app/workspace
+Environment=AETHER_SANDBOX=/opt/aether/bin/aether-sandbox
+Environment=AETHER_AI_URL=http://127.0.0.1:5001
+ExecStart=/opt/aether/bin/aether-api
+Restart=always
+RestartSec=3
+User=ubuntu
 [Install]
 WantedBy=multi-user.target
 UNIT
@@ -100,7 +126,6 @@ sudo tee /etc/systemd/system/aether-frontend.service >/dev/null <<UNIT
 [Unit]
 Description=Aether frontend
 After=network.target aether-backend.service
-
 [Service]
 Type=simple
 WorkingDirectory=/opt/aether/app/frontend
@@ -110,15 +135,14 @@ ExecStart=/usr/bin/npm run start -- -H 0.0.0.0 -p 3000
 Restart=always
 RestartSec=3
 User=ubuntu
-
 [Install]
 WantedBy=multi-user.target
 UNIT
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now aether-backend aether-frontend
+sudo systemctl enable --now aether-ai aether-backend aether-frontend
 sleep 2
-sudo systemctl --no-pager --full status aether-backend aether-frontend || true
+sudo systemctl --no-pager is-active aether-ai aether-backend aether-frontend || true
 REMOTE
 
 echo ""
