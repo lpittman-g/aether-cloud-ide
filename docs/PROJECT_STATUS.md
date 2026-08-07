@@ -1,30 +1,32 @@
 # Project status — Aether Cloud IDE
 
 **Repo:** https://github.com/lpittman-g/aether-cloud-ide  
-**Updated:** 2026-08-06 (evening)
+**Updated:** 2026-08-07
 
 ## Done
 
-- [x] Aether IDE codebase + GitHub repo
-- [x] CI / deploy workflows + docs vault
-- [x] GitHub Actions **variables** set: `AWS_ACCOUNT_ID=583968735276`, `AWS_REGION=us-east-2`, `EC2_KEY_NAME=aether-cursor`
-- [x] Confirmed IAM user `Cursor` can sign into console with **AdministratorAccess**
-- [x] Confirmed user currently has **0** access keys
+- [x] App + CI + docs vault on GitHub
+- [x] GitHub Actions variables: `AWS_ACCOUNT_ID=583968735276`, `AWS_REGION=us-east-2`, `EC2_KEY_NAME=aether-cursor`
+- [x] IAM user `Cursor` has AdministratorAccess; console login works
+- [x] Bootstrap script ready: `infra/aws/bootstrap-from-keys.sh`
 
-## Blocked
+## Blocked (AWS account)
 
-- [ ] Creating IAM access key via automation failed (IAM “Create access key” UI does not open; CloudShell blocked: account verification in progress up to ~2 days)
-- [ ] Without Access Key ID + Secret, agent cannot call AWS APIs or store deploy secrets
+Cannot auto-create IAM access keys yet:
 
-## What the human must do once
+1. **CloudShell** — “account verification is in progress” (up to ~2 days for new accounts) in `us-east-1` and `us-east-2`
+2. **IAM console** — “Create access key” control does not open under automation (0 keys exist)
 
-1. Open https://us-east-2.console.aws.amazon.com/iam/home?region=us-east-2#/users/details/Cursor?section=security_credentials  
-2. Click **Create access key** → CLI → create  
-3. Paste the two values into chat **or** Settings → Secrets → Actions as `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`  
+Until an Access Key ID + Secret exist, agents cannot call AWS APIs or persist deploy credentials.
 
-Then the agent runs `infra/aws/bootstrap-from-keys.sh` (stores secrets + launches EC2) with no further prompts.
+## Autonomous path once unblocked
 
-## Note on “paste it into GitHub”
+1. Create key (CloudShell when verification clears, or human clicks Create access key once)
+2. Agent runs:
+   - `gh secret set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY`
+   - `./infra/aws/bootstrap-from-keys.sh` → EC2 key + launch + store `EC2_SSH_KEY`
+3. Future agents/deploys use GitHub + Cursor environment secrets with no prompts
 
-- Non-secret config → already in `docs/` and GitHub **variables**  
-- Secret values → GitHub **Actions secrets** only (never commit to git files)
+## Requested Cursor environment secrets
+
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_ACCOUNT_ID`, `EC2_SSH_KEY`, `GH_TOKEN`
